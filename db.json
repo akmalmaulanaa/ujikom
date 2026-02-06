@@ -1,0 +1,22 @@
+{
+  "device": {
+    "output": {
+      "led": {
+        "merah": 0,
+        "hijau": 0,
+        "biru": 0
+      },
+      "servo": {
+        "angle": 0
+      }
+    },
+    "sensor": {
+      "ultrasonic": {
+        "distance": 0
+      }
+    },
+    "status": {
+      "online": false
+    }
+  }
+}

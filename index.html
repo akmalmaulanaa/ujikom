@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Industrial SCADA Panel</title>
+
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #111;
+      --muted: #666;
+      --accent: #00c3ff; 
+      --border: rgba(0,0,0,0.15);
+    }
+
+    body.dark {
+      --bg: #0b1220;
+      --panel: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #00c3ff;
+      --border: rgba(255,255,255,0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: 0.3s;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 25px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 1px;
+    }
+
+    .toggleMode {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 20px;
+    }
+
+    .main {
+      padding: 25px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+    }
+
+    .card h3 {
+      margin: 0 0 18px;
+      font-size: 16px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .controlRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    button.deviceBtn {
+      border: none;
+      padding: 8px 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      color: white;
+      transition: 0.2s;
+    }
+
+    .on { background: #22c55e; }
+    .off { background: #ef4444; }
+
+    /* ===== GAUGE DESIGN (LABEL 0-180) ===== */
+    .gaugeWrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .gaugeContainer {
+      width: 220px;
+      height: 200px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .gaugeSvg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .gaugeTrack {
+      fill: none;
+      stroke: #2d3748; 
+      stroke-width: 14;
+      stroke-linecap: round;
+    }
+
+    .gaugeProgress {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 14;
+      stroke-linecap: round;
+      stroke-dasharray: 300; /* Panjang total path */
+      stroke-dashoffset: 300; /* Default 0 (300 = kosong) */
+      transition: stroke-dashoffset 0.3s ease-out;
+    }
+
+    .gaugeValueCenter {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .valueBig {
+      font-size: 42px;
+      font-weight: 300;
+      color: var(--accent);
+    }
+
+    .unitSmall {
+      font-size: 18px;
+      margin-left: 2px;
+    }
+
+    .gaugeLabels {
+      position: absolute;
+      bottom: 25px;
+      width: 78%;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      width: 80%;
+      margin-top: 10px;
+      accent-color: var(--accent);
+    }
+
+    .statusOnline { color: #22c55e; font-weight: bold; }
+    .statusOffline { color: #ef4444; font-weight: bold; }
+
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>⚙️ Industrial SCADA Panel</h1>
+  <div class="toggleMode" id="modeToggle">
+    <span id="iconSun">🌞</span>
+    <span id="iconMoon" style="opacity:0.3;">🌙</span>
+  </div>
+</header>
+
+<main class="main">
+  <div class="grid">
+
+    <div class="card">
+      <h3>Lighting Zone Control</h3>
+      <div class="controlRow"><span>Lampu Koridor 1</span><button id="led-merah" class="deviceBtn off">OFF</button></div>
+      <div class="controlRow"><span>Lampu Koridor 2</span><button id="led-hijau" class="deviceBtn off">OFF</button></div>
+      <div class="controlRow"><span>Lampu Koridor 3</span><button id="led-biru" class="deviceBtn off">OFF</button></div>
+    </div>
+
+    <div class="card">
+      <h3>Servo Gate Position</h3>
+      <div class="gaugeWrapper">
+        <div class="gaugeContainer">
+          <svg class="gaugeSvg" viewBox="0 0 160 160">
+            <path class="gaugeTrack" d="M 35 125 A 55 55 0 1 1 125 125" />
+            <path id="gaugeProgress" class="gaugeProgress" d="M 35 125 A 55 55 0 1 1 125 125" />
+          </svg>
+          
+          <div class="gaugeValueCenter">
+            <span id="servoValue" class="valueBig">0</span><span class="unitSmall" style="color:var(--accent)">°</span>
+          </div>
+
+          <div class="gaugeLabels">
+            <span>0</span>
+            <span>180</span>
+          </div>
+        </div>
+
+        <input type="range" min="0" max="180" value="0" id="servoRange">
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Ultrasonic Monitoring</h3>
+      <p>Distance:</p>
+      <h2 style="font-size: 32px; color: var(--accent);"><span id="distance">0</span> cm</h2>
+      <p>Status: <span id="status" class="statusOffline">OFFLINE</span></p>
+    </div>
+
+  </div>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA51DAWCA2o1Zg1rV-qcOax4EyvZaFY2Kk",
+  authDomain: "ujikom-d63d1.firebaseapp.com",
+  databaseURL: "https://ujikom-d63d1-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ujikom-d63d1",
+  storageBucket: "ujikom-d63d1.firebasestorage.app",
+  messagingSenderId: "186547875040",
+  appId: "1:186547875040:web:d002e8f4470b6cb425b485"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* DARK MODE */
+const modeToggle = document.getElementById("modeToggle");
+const sun = document.getElementById("iconSun");
+const moon = document.getElementById("iconMoon");
+
+modeToggle.onclick = () => {
+  document.body.classList.toggle("dark");
+  sun.style.opacity = document.body.classList.contains("dark") ? "0.3" : "1";
+  moon.style.opacity = document.body.classList.contains("dark") ? "1" : "0.3";
+};
+
+/* LED CONTROL */
+["merah","hijau","biru"].forEach(color => {
+  const btn = document.getElementById(`led-${color}`);
+  const ledRef = ref(db, `device/output/led/${color}`);
+  onValue(ledRef, snap => {
+    const val = snap.val();
+    btn.textContent = val ? "ON" : "OFF";
+    btn.className = "deviceBtn " + (val ? "on" : "off");
+  });
+  btn.onclick = () => set(ledRef, btn.textContent === "OFF" ? 1 : 0);
+});
+
+/* GAUGE LOGIC (REAL 0-180) */
+const servoRange = document.getElementById("servoRange");
+const servoValue = document.getElementById("servoValue");
+const progressCircle = document.getElementById("gaugeProgress");
+const servoRef = ref(db, "device/output/servo/angle");
+
+const MAX_DASH = 285; // Menyesuaikan dengan panjang path busur baru
+
+function updateGauge(angle) {
+  angle = Math.max(0, Math.min(180, angle));
+  servoValue.textContent = angle;
+
+  // Hitung offset: 0 derajat -> dashoffset 285 (kosong), 180 derajat -> dashoffset 0 (penuh)
+  const offset = MAX_DASH - (angle / 180) * MAX_DASH;
+  progressCircle.style.strokeDashoffset = offset;
+}
+
+onValue(servoRef, snap => {
+  const angle = snap.val() || 0;
+  servoRange.value = angle;
+  updateGauge(angle);
+});
+
+servoRange.oninput = () => {
+  updateGauge(servoRange.value);
+  set(servoRef, Number(servoRange.value));
+};
+
+/* SENSOR */
+onValue(ref(db, "device/sensor/ultrasonic/distance"), snap => {
+  document.getElementById("distance").textContent = snap.val();
+});
+
+onValue(ref(db, "device/status/online"), snap => {
+  const st = document.getElementById("status");
+  const isOnline = snap.val();
+  st.textContent = isOnline ? "ONLINE" : "OFFLINE";
+  st.className = isOnline ? "statusOnline" : "statusOffline";
+});
+</script>
+
+</body>
+</html>
